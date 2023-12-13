@@ -1,0 +1,140 @@
+#version 330 core
+/*
+Author: Kaiwen Gong
+Class: ECE6122
+Last Date Modified: 12/04/2024
+Description:
+Implementing required functions
+*/
+
+// Interpolated values from the vertex shaders
+in vec2 UV;
+in vec3 Position_worldspace;
+in vec3 Normal_cameraspace;
+in vec3 EyeDirection_cameraspace;
+in vec3 LightDirection_cameraspace1;
+in vec3 LightDirection_cameraspace2;
+in vec3 LightDirection_cameraspace3;
+in vec3 LightDirection_cameraspace4;
+
+
+// Ouput data
+out vec3 color;
+vec3 tempcolor = vec3(0,0,0);
+
+uniform int isrect;
+
+// Values that stay constant for the whole mesh.
+uniform sampler2D myTextureSampler1;
+uniform sampler2D myTextureSampler2;
+
+
+
+
+
+uniform mat4 MV;
+uniform vec3 LightPosition_worldspace1;
+uniform vec3 LightPosition_worldspace2;
+uniform vec3 LightPosition_worldspace3;
+uniform vec3 LightPosition_worldspace4;
+vec3 MaterialDiffuseColor;
+
+
+vec3 calculateLight(vec3 LightPosition_worldspace,vec3 MaterialAmbientColor, vec3 MaterialDiffuseColor, vec3 MaterialSpecularColor, vec3 n, vec3 E, vec3 LightColor, float LightPower);
+
+void main(){
+
+    // Light emission properties
+    // You probably want to put them as uniforms
+    vec3 LightColor = vec3(1,1,1);
+    float LightPower = 50.0f;
+    
+    // Material properties
+
+    
+    if(isrect == 1){
+        MaterialDiffuseColor = texture(myTextureSampler1,UV).rgb;
+    }else{
+        MaterialDiffuseColor = texture(myTextureSampler2,UV).rgb;
+    }
+    vec3 MaterialAmbientColor = vec3(0.1,0.1,0.1) * MaterialDiffuseColor;
+    vec3 MaterialSpecularColor = vec3(0.3,0.3,0.3);
+
+
+
+    // Distance to the light
+    float distance1 = length( LightPosition_worldspace1 - Position_worldspace );
+    float distance2 = length( LightPosition_worldspace2 - Position_worldspace );
+    float distance3 = length( LightPosition_worldspace3 - Position_worldspace );
+    float distance4 = length( LightPosition_worldspace4 - Position_worldspace );
+
+    // Normal of the computed fragment, in camera space
+    vec3 n1 = normalize( Normal_cameraspace );
+    vec3 n2 = normalize( Normal_cameraspace );
+    vec3 n3 = normalize( Normal_cameraspace );
+    vec3 n4 = normalize( Normal_cameraspace );
+    
+    // Direction of the light (from the fragment to the light)
+    vec3 l1 = normalize( LightDirection_cameraspace1);
+    vec3 l2 = normalize( LightDirection_cameraspace2);
+    vec3 l3 = normalize( LightDirection_cameraspace3);
+    vec3 l4 = normalize( LightDirection_cameraspace4);
+    
+    
+    // Normal of the computed fragment, in camera space
+    
+
+    
+    // Cosine of the angle between the normal and the light direction,
+    // clamped above 0
+    //  - light is at the vertical of the triangle -> 1
+    //  - light is perpendicular to the triangle -> 0
+    //  - light is behind the triangle -> 0
+    float cosTheta1 = clamp( dot( n1,l1 ), 0,1 );
+    float cosTheta2 = clamp( dot( n2,l2 ), 0,1 );
+    float cosTheta3 = clamp( dot( n3,l3 ), 0,1 );
+    float cosTheta4 = clamp( dot( n4,l4 ), 0,1 );
+    
+    // Eye vector (towards the camera)
+    vec3 E = normalize(EyeDirection_cameraspace);
+    
+    
+    // Direction in which the triangle reflects the light
+    vec3 R1 = reflect(-l1,n1);
+    vec3 R2 = reflect(-l2,n2);
+    vec3 R3 = reflect(-l3,n3);
+    vec3 R4 = reflect(-l4,n4);
+    
+    
+    // Cosine of the angle between the Eye vector and the Reflect vector,
+    // clamped to 0
+    //  - Looking into the reflection -> 1
+    //  - Looking elsewhere -> < 1
+    float cosAlpha1 = clamp( dot( E,R1 ), 0,1 );
+    float cosAlpha2 = clamp( dot( E,R2 ), 0,1 );
+    float cosAlpha3 = clamp( dot( E,R3 ), 0,1 );
+    float cosAlpha4 = clamp( dot( E,R4 ), 0,1 );
+    
+    vec3 lightContribution1 = calculateLight(LightPosition_worldspace1, MaterialAmbientColor, MaterialDiffuseColor, MaterialSpecularColor, n1, E, LightColor, LightPower);
+    vec3 lightContribution2 = calculateLight(LightPosition_worldspace2, MaterialAmbientColor, MaterialDiffuseColor, MaterialSpecularColor, n2, E, LightColor, LightPower);
+    vec3 lightContribution3 = calculateLight(LightPosition_worldspace3, MaterialAmbientColor, MaterialDiffuseColor, MaterialSpecularColor, n3, E, LightColor, LightPower);
+    vec3 lightContribution4 = calculateLight(LightPosition_worldspace4, MaterialAmbientColor, MaterialDiffuseColor, MaterialSpecularColor, n4, E, LightColor, LightPower);
+    color = lightContribution1 + lightContribution2 + lightContribution3 + lightContribution4;
+    
+
+
+}
+
+// Function definition
+vec3 calculateLight(vec3 LightPosition_worldspace,vec3 MaterialAmbientColor, vec3 MaterialDiffuseColor, vec3 MaterialSpecularColor, vec3 n, vec3 E, vec3 LightColor, float LightPower) {
+    vec3 l = normalize(LightPosition_worldspace - Position_worldspace);
+    float cosTheta = clamp(dot(n, l), 0, 1);
+    vec3 R = reflect(-l, n);
+    float cosAlpha = clamp(dot(E, R), 0, 1);
+    float distance = length(LightPosition_worldspace - Position_worldspace);
+    vec3 attenuation = LightColor * LightPower / (distance * distance);
+    vec3 ambient = MaterialAmbientColor;
+    vec3 diffuse = MaterialDiffuseColor * cosTheta * attenuation;
+    vec3 specular = MaterialSpecularColor * pow(cosAlpha, 5) * attenuation;
+    return ambient + diffuse + specular;
+}
