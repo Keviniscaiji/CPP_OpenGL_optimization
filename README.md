@@ -1,4 +1,4 @@
-# -Multi-threading-Optimization-of-Complex-Graphics-Project-Based-on-C-OpenGL
+# Multi-threading-Optimization-of-Complex-Graphics-Project-Based-on-C-OpenGL
 ## Project Overview
 
 This project involves the development of an advanced graphics application using C++ and OpenGL. The primary focus is on optimizing complex graphical renderings through multi-threading, enhancing both performance and visual quality.
